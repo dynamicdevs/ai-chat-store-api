@@ -30,25 +30,34 @@ func (a *Assistand) HelpWithEveryThing(question string) (string, error) {
 		return "", err
 	}
 	attributedb := attributepg.New(a.db.Pool)
-
-	productToAttribute := make(map[int][]string)
-
-	mostSimilarAttributes, mostSimilarProducts, err := attributedb.MostSimilarVectors(ctx, embedding, 5)
+	mostSimilarProducts, err := attributedb.MostSimilarVectors(ctx, embedding, 5)
 	if err != nil {
 		return "", err
 	}
 
-	for _, attribute := range mostSimilarAttributes {
-		productToAttribute[attribute.Product] = append(productToAttribute[attribute.Product], attribute.Information)
+	listOfProducts := []int{}
+	for _, product := range mostSimilarProducts {
+		listOfProducts = append(listOfProducts, product.Id)
+	}
+
+	productIdToAttributes, err := attributedb.GetByProducts(ctx, listOfProducts)
+	if err != nil {
+		return "", err
 	}
 
 	productosArmados := []string{}
 	for _, product := range mostSimilarProducts {
-		attributes := strings.Join(productToAttribute[product.Id], "\n")
-		productAndAttributes := fmt.Sprintf(`Name: %s.
-			Attributes:
-			%s
+		productAttributes := productIdToAttributes[product.Id]
+		attributes := ""
+		for _, productAttribute := range productAttributes {
+			attributes += productAttribute.Information + "\n"
+		}
+		productAndAttributes := fmt.Sprintf(`
+Name: %s.
+Attributes:
+%s
 		`, product.Name, attributes)
+		fmt.Println(productAndAttributes)
 
 		productosArmados = append(productosArmados, productAndAttributes)
 

@@ -8,6 +8,6 @@ import (
 
 type Repository interface {
 	Save(ctx context.Context, a *Attribute) error
-	MostSimilarVectors(ctx context.Context, embedding []float32, limit int) ([]Attribute, []product.Product, error)
-	GetByProduct(ctx context.Context, sku int) ([]*Attribute, error)
+	MostSimilarVectors(ctx context.Context, embedding []float32, limit int) ([]product.Product, error)
+	GetByProducts(ctx context.Context, skus []int) (map[int][]Attribute, error)
 }
