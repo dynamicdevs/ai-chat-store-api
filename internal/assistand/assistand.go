@@ -23,19 +23,19 @@ func New(db *database.Connection, openia *openia.Openia) *Assistand {
 	}
 }
 
-func (a *Assistand) HelpWithEveryThing(chat []chat.Message) (string, error) {
+func (a *Assistand) HelpWithEveryThing(messages chat.Messages) (chat.Messages, error) {
 	//get embedding of the question
 	ctx := context.Background()
-	question := chat[len(chat)-1].Content
-	chat[len(chat)-1].Content = fmt.Sprintf(`Question:%s`, question)
+	question := messages[len(messages)-1].Content
+	messages[len(messages)-1].Content = fmt.Sprintf(`Question:%s`, question)
 	embedding, err := a.openia.GenerateEmbedding(question)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	attributedb := attributepg.New(a.db.Pool)
-	mostSimilarProducts, err := attributedb.MostSimilarVectors(ctx, embedding, 5)
+	mostSimilarProducts, err := attributedb.MostSimilarVectors(ctx, embedding, 3)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	listOfProducts := []int{}
@@ -45,7 +45,7 @@ func (a *Assistand) HelpWithEveryThing(chat []chat.Message) (string, error) {
 
 	productIdToAttributes, err := attributedb.GetByProducts(ctx, listOfProducts)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	productosArmados := []string{}
@@ -66,12 +66,13 @@ Attributes:
 
 	}
 
-	chat[len(chat)-1].Content = fmt.Sprintf(`Question:%s`, question)
-
-	response, err := a.openia.Chat(chat, strings.Join(productosArmados, "\n"))
+	messages.AddSystemMessage(strings.Join(productosArmados, "\n"))
+	messages.AddQuestion(question)
+	response, err := a.openia.Chat(messages)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
+	messages.AddAssistant(response)
 
-	return response, nil
+	return messages, nil
 }

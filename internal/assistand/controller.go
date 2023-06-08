@@ -19,8 +19,7 @@ func ControllerFactory(fiberApp *fiber.App, app *Assistand) {
 			return c.Status(400).SendString("Failed to get message")
 		}
 
-		messages = append(messages, chat.Message{Role: "assistant", Content: resp})
-		return c.JSON(messages)
+		return c.JSON(resp)
 
 	})
 
