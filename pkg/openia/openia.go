@@ -1,6 +1,7 @@
 package openia
 
 import (
+	"fmt"
 	"github.com/Abraxas-365/commerce-chat/pkg/openia/chat"
 	"github.com/Abraxas-365/commerce-chat/pkg/openia/embedding"
 )
@@ -17,6 +18,7 @@ func New(apiKey string) *Openia {
 
 func (o *Openia) GenerateEmbedding(text string) ([]float32, error) {
 	embedding, err := embedding.GenerateEmbedding(o.apiKey, []string{text})
+	fmt.Println("Attribute", text)
 	if err != nil {
 		return nil, err
 	}

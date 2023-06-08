@@ -52,12 +52,12 @@ func (i *Indexer) Index(csv string) error {
 			attribute.Product = productId
 			embedding, err := i.openia.GenerateEmbedding(attribute.Information)
 			if err != nil {
-				//TODO: should handle retries
+				fmt.Println("ERROR EN:", attribute, "ERROR", err)
 				return err
 			}
 			attribute.Embedding = embedding
 			if err := attributedb.Save(ctx, &attribute); err != nil {
-				//TODO: should handle retries
+				fmt.Println("ERROR EN:", attribute, "ERROR", err)
 				return err
 			}
 		}
@@ -92,7 +92,7 @@ func (i *Indexer) ReadCsv(filename string) ([]productAttribute, error) {
 
 		var attributes []attribute.Attribute
 		// Parse attributes
-		for _, attr := range strings.Split(line[2], ",") {
+		for _, attr := range strings.Split(line[2], "\n") {
 			attribute := attribute.Attribute{Information: attr}
 			attributes = append(attributes, attribute)
 		}
