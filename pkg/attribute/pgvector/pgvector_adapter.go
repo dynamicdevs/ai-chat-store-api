@@ -2,7 +2,6 @@ package pgvector
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/Abraxas-365/commerce-chat/pkg/attribute"
 	"github.com/Abraxas-365/commerce-chat/pkg/product"
@@ -20,8 +19,17 @@ func New(pool *pgxpool.Pool) attribute.Repository {
 }
 
 func (r *attributeRepository) Save(ctx context.Context, a *attribute.Attribute) error {
-	query := `INSERT INTO "public"."attribute" (product, information, embedding) VALUES ($1, $2, $3)`
-	_, err := r.pool.Exec(ctx, query, a.Product, a.Information, pgvector.NewVector(a.Embedding))
+	// Insert into attribute table
+	query := `INSERT INTO "public"."attribute" (information, embedding) VALUES ($1, $2) RETURNING id`
+	var attributeID int
+	err := r.pool.QueryRow(ctx, query, a.Information, pgvector.NewVector(a.Embedding)).Scan(&attributeID)
+	if err != nil {
+		return err
+	}
+
+	// Associate the attribute with the product in the product_attribute table
+	assocQuery := `INSERT INTO "public"."product_attribute" (product_id, attribute_id) VALUES ($1, $2)`
+	_, err = r.pool.Exec(ctx, assocQuery, a.Product, attributeID)
 	return err
 }
 
@@ -29,7 +37,8 @@ func (r *attributeRepository) MostSimilarVectors(ctx context.Context, embedding 
 	query := `
 	SELECT DISTINCT ON (p.id) p.id, p.sku, p.name
 	FROM "public"."attribute" a
-	JOIN "public"."product" p ON a.product = p.id
+	JOIN "public"."product_attribute" pa ON a.id = pa.attribute_id
+	JOIN "public"."product" p ON pa.product_id = p.id
 	ORDER BY p.id, a.embedding <-> $1
 	LIMIT $2;
 	`
@@ -62,11 +71,12 @@ func (r *attributeRepository) MostSimilarVectors(ctx context.Context, embedding 
 
 func (r *attributeRepository) GetByProducts(ctx context.Context, ids []int) (map[int][]attribute.Attribute, error) {
 	query := `
-    SELECT  a.id, a.product, a.information
-    FROM "public"."attribute" a
-    JOIN "public"."product" p ON a.product = p.id
-    WHERE p.id = ANY($1);
-    `
+	SELECT a.id, pa.product_id, a.information
+	FROM "public"."attribute" a
+	JOIN "public"."product_attribute" pa ON a.id = pa.attribute_id
+	WHERE pa.product_id = ANY($1);
+	`
+
 	skuArray := pq.Array(ids)
 	rows, err := r.pool.Query(ctx, query, skuArray)
 	if err != nil {
@@ -79,7 +89,6 @@ func (r *attributeRepository) GetByProducts(ctx context.Context, ids []int) (map
 		var a attribute.Attribute
 		err := rows.Scan(&a.Id, &a.Product, &a.Information)
 		if err != nil {
-			fmt.Println(err)
 			return nil, err
 		}
 		attributeMap[a.Product] = append(attributeMap[a.Product], a)
