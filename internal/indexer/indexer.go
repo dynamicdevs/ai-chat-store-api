@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/Abraxas-365/commerce-chat/internal/database"
 	"github.com/Abraxas-365/commerce-chat/pkg/attribute"
@@ -20,7 +21,7 @@ type Indexer struct {
 	openia *openia.Openia
 }
 
-type productAttribute struct {
+type ProductAttribute struct {
 	Product   product.Product       `json:"product"`
 	Attribute []attribute.Attribute `json:"attribute"`
 }
@@ -42,46 +43,81 @@ func (i *Indexer) Index(csv string) error {
 		return err
 	}
 
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, 5) // limits concurrent goroutines
+
 	for _, productAttribute := range productAttributes {
-		productId, err := productdb.Save(ctx, &productAttribute.Product)
-		if err != nil {
-			return err
-		}
+		wg.Add(1)
+		sem <- struct{}{} // acquire a slot
 
-		for _, attribute := range productAttribute.Attribute {
-			attribute.Product = productId
-			embedding, err := i.openia.GenerateEmbedding(attribute.Information)
+		go func(productAttribute ProductAttribute) {
+			defer wg.Done()
+			defer func() { <-sem }() // release slot
+
+			productId, err := productdb.Save(ctx, &productAttribute.Product)
 			if err != nil {
-				fmt.Println("ERROR EN:", attribute, "ERROR", err)
-				return err
+				fmt.Println("Error saving product:", err)
+				return
 			}
-			attribute.Embedding = embedding
-			if err := attributedb.Save(ctx, &attribute); err != nil {
-				fmt.Println("ERROR EN:", attribute, "ERROR", err)
-				return err
-			}
-		}
 
+			for _, attribute := range productAttribute.Attribute {
+				attribute.Product = productId
+
+				id, exist, err := attributedb.CheckAttributeExists(ctx, attribute.Information)
+				if err != nil {
+					fmt.Println("Error checking attribute existence:", err)
+					return
+				}
+
+				if exist {
+					err := attributedb.AssociateAttributeWithProduct(ctx, productId, id)
+					if err != nil {
+						fmt.Println("Error associating attribute with product:", err)
+					}
+					continue
+				}
+
+				embedding, err := i.openia.GenerateEmbedding(attribute.Information)
+				if err != nil {
+					fmt.Println("Error generating embedding:", err)
+					return
+				}
+				attribute.Embedding = embedding
+
+				id, err = attributedb.Save(ctx, &attribute)
+				if err != nil {
+					fmt.Println("Error saving attribute:", err)
+					return
+				}
+
+				err = attributedb.AssociateAttributeWithProduct(ctx, productId, id)
+				if err != nil {
+					fmt.Println("Error associating attribute with product:", err)
+				}
+			}
+		}(productAttribute)
 	}
+
+	wg.Wait() // wait for all goroutines to finish
 
 	return nil
 }
 
-func (i *Indexer) ReadCsv(filename string) ([]productAttribute, error) {
+func (i *Indexer) ReadCsv(filename string) ([]ProductAttribute, error) {
 	// Open CSV file
 	f, err := os.Open(filename)
 	if err != nil {
-		return []productAttribute{}, err
+		return []ProductAttribute{}, err
 	}
 	defer f.Close()
 
 	// Read File into a Variable
 	lines, err := csv.NewReader(f).ReadAll()
 	if err != nil {
-		return []productAttribute{}, err
+		return []ProductAttribute{}, err
 	}
 
-	var productAttributes []productAttribute
+	var productAttributes []ProductAttribute
 
 	for _, line := range lines {
 		product := product.Product{
@@ -97,7 +133,7 @@ func (i *Indexer) ReadCsv(filename string) ([]productAttribute, error) {
 			attributes = append(attributes, attribute)
 		}
 
-		productAttribute := productAttribute{
+		productAttribute := ProductAttribute{
 			Product:   product,
 			Attribute: attributes,
 		}

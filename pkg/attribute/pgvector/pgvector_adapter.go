@@ -2,6 +2,7 @@ package pgvector
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Abraxas-365/commerce-chat/pkg/attribute"
 	"github.com/Abraxas-365/commerce-chat/pkg/product"
@@ -18,19 +19,36 @@ func New(pool *pgxpool.Pool) attribute.Repository {
 	return &attributeRepository{pool: pool}
 }
 
-func (r *attributeRepository) Save(ctx context.Context, a *attribute.Attribute) error {
-	// Insert into attribute table
+func (r *attributeRepository) Save(ctx context.Context, a *attribute.Attribute) (int, error) {
 	query := `INSERT INTO "public"."attribute" (information, embedding) VALUES ($1, $2) RETURNING id`
 	var attributeID int
 	err := r.pool.QueryRow(ctx, query, a.Information, pgvector.NewVector(a.Embedding)).Scan(&attributeID)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
-	// Associate the attribute with the product in the product_attribute table
-	assocQuery := `INSERT INTO "public"."product_attribute" (product_id, attribute_id) VALUES ($1, $2)`
-	_, err = r.pool.Exec(ctx, assocQuery, a.Product, attributeID)
+	return attributeID, nil
+}
+
+func (r *attributeRepository) AssociateAttributeWithProduct(ctx context.Context, productID int, attributeID int) error {
+	query := `INSERT INTO "public"."product_attribute" (product_id, attribute_id) VALUES ($1, $2)`
+	_, err := r.pool.Exec(ctx, query, productID, attributeID)
 	return err
+}
+
+func (r *attributeRepository) CheckAttributeExists(ctx context.Context, information string) (int, bool, error) {
+	checkQuery := `SELECT id FROM "public"."attribute" WHERE information = $1`
+	var existingAttributeID int
+	err := r.pool.QueryRow(ctx, checkQuery, information).Scan(&existingAttributeID)
+	if err != nil {
+		if err.Error() == "no rows in result set" {
+			return 0, false, nil
+		}
+		fmt.Println("ERRR", err)
+		return 0, false, err
+	}
+
+	return existingAttributeID, true, nil
 }
 
 func (r *attributeRepository) MostSimilarVectors(ctx context.Context, embedding []float32, limit int) ([]product.Product, error) {
