@@ -8,6 +8,7 @@ import (
 	"github.com/Abraxas-365/commerce-chat/internal/database"
 	attributepg "github.com/Abraxas-365/commerce-chat/pkg/attribute/pgvector"
 	"github.com/Abraxas-365/commerce-chat/pkg/openia"
+	"github.com/Abraxas-365/commerce-chat/pkg/openia/chat"
 )
 
 type Assistand struct {
@@ -22,9 +23,11 @@ func New(db *database.Connection, openia *openia.Openia) *Assistand {
 	}
 }
 
-func (a *Assistand) HelpWithEveryThing(question string) (string, error) {
+func (a *Assistand) HelpWithEveryThing(chat []chat.Message) (string, error) {
 	//get embedding of the question
 	ctx := context.Background()
+	question := chat[len(chat)-1].Content
+	chat[len(chat)-1].Content = fmt.Sprintf(`Question:%s`, question)
 	embedding, err := a.openia.GenerateEmbedding(question)
 	if err != nil {
 		return "", err
@@ -63,9 +66,9 @@ Attributes:
 
 	}
 
-	prompt := fmt.Sprintf(`Question:%s`, question)
+	chat[len(chat)-1].Content = fmt.Sprintf(`Question:%s`, question)
 
-	response, err := a.openia.Chat(prompt, strings.Join(productosArmados, "\n"))
+	response, err := a.openia.Chat(chat, strings.Join(productosArmados, "\n"))
 	if err != nil {
 		return "", err
 	}

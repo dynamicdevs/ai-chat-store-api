@@ -27,8 +27,8 @@ func (o *Openia) GenerateEmbedding(text string) ([]float32, error) {
 
 }
 
-func (o *Openia) Chat(question string, products string) (string, error) {
-	chat, err := chat.Chat(o.apiKey, []chat.Message{
+func (o *Openia) Chat(currentChatState []chat.Message, products string) (string, error) {
+	chatHistory := []chat.Message{
 		{
 			Role: "system",
 			Content: `You are an ecommerce asystenat of ABCDIN that is goig to help the customer aswering
@@ -39,11 +39,10 @@ func (o *Openia) Chat(question string, products string) (string, error) {
 			Role:    "system",
 			Content: products,
 		},
-		{
-			Role:    "user",
-			Content: question,
-		},
-	})
+	}
+	chatHistory = append(chatHistory, currentChatState...)
+	fmt.Println("Chat History:", chatHistory)
+	chat, err := chat.Chat(o.apiKey, chatHistory)
 	if err != nil {
 		return "", err
 	}
