@@ -53,13 +53,17 @@ func (r *attributeRepository) CheckAttributeExists(ctx context.Context, informat
 
 func (r *attributeRepository) MostSimilarVectors(ctx context.Context, embedding []float32, limit int) ([]product.Product, error) {
 	query := `
-	SELECT DISTINCT ON (p.id) p.id, p.sku, p.name
-	FROM "public"."attribute" a
-	JOIN "public"."product_attribute" pa ON a.id = pa.attribute_id
-	JOIN "public"."product" p ON pa.product_id = p.id
-	ORDER BY p.id, a.embedding <-> $1
-	LIMIT $2;
-	`
+    SELECT p.id, p.sku, p.name
+    FROM "public"."product" p
+    JOIN (
+        SELECT pa.product_id, MIN(a.embedding <-> $1) as distance
+        FROM "public"."attribute" a
+        JOIN "public"."product_attribute" pa ON a.id = pa.attribute_id
+        GROUP BY pa.product_id
+    ) subquery ON p.id = subquery.product_id
+    ORDER BY subquery.distance
+    LIMIT $2;
+    `
 
 	rows, err := r.pool.Query(ctx, query, pgvector.NewVector(embedding), limit)
 	if err != nil {
