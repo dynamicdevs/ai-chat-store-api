@@ -9,6 +9,7 @@ type Message struct {
 
 type Messages []Message
 
+//Add the the the message before the last user message
 func (m *Messages) AddSystemMessage(message string) {
 	index := len(*m) - 1
 	*m = append((*m)[:index], append([]Message{

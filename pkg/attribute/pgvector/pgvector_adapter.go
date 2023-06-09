@@ -91,6 +91,49 @@ func (r *attributeRepository) MostSimilarVectors(ctx context.Context, embedding 
 	return products, nil
 }
 
+func (r *attributeRepository) MostSimilarVectorsExeptProductBySku(ctx context.Context, embedding []float32, limit int, excludeSku string) ([]product.Product, error) {
+	query := `
+    SELECT p.id, p.sku, p.name
+    FROM "public"."product" p
+    JOIN (
+        SELECT pa.product_id, MIN(a.embedding <-> $1) as distance
+        FROM "public"."attribute" a
+        JOIN "public"."product_attribute" pa ON a.id = pa.attribute_id
+        WHERE pa.product_id NOT IN (
+            SELECT id FROM "public"."product" WHERE sku = $2
+        )
+        GROUP BY pa.product_id
+    ) subquery ON p.id = subquery.product_id
+    ORDER BY subquery.distance
+    LIMIT $3;
+    `
+
+	rows, err := r.pool.Query(ctx, query, pgvector.NewVector(embedding), excludeSku, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var products []product.Product
+
+	for rows.Next() {
+		var p product.Product
+
+		err := rows.Scan(&p.Id, &p.Sku, &p.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		products = append(products, p)
+	}
+
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
+
+	return products, nil
+}
+
 func (r *attributeRepository) GetByProducts(ctx context.Context, ids []int) (map[int][]attribute.Attribute, error) {
 	query := `
 	SELECT a.id, pa.product_id, a.information
@@ -120,4 +163,35 @@ func (r *attributeRepository) GetByProducts(ctx context.Context, ids []int) (map
 		return nil, rows.Err()
 	}
 	return attributeMap, nil
+}
+
+func (r *attributeRepository) GetBySKU(ctx context.Context, sku string) ([]attribute.Attribute, error) {
+	query := `
+	SELECT a.id, a.information
+	FROM "public"."attribute" a
+	JOIN "public"."product_attribute" pa ON a.id = pa.attribute_id
+	JOIN "public"."product" p ON pa.product_id = p.id
+	WHERE p.sku = $1;
+	`
+
+	rows, err := r.pool.Query(ctx, query, sku)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var attributes []attribute.Attribute
+	for rows.Next() {
+		var a attribute.Attribute
+		err := rows.Scan(&a.Id, &a.Information)
+		if err != nil {
+			return nil, err
+		}
+		attributes = append(attributes, a)
+	}
+
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
+	return attributes, nil
 }

@@ -4,8 +4,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/Abraxas-365/commerce-chat/internal/assistand"
+	"github.com/Abraxas-365/commerce-chat/internal/chatbot"
 	"github.com/Abraxas-365/commerce-chat/internal/database"
+	"github.com/Abraxas-365/commerce-chat/pkg/assistant"
 	"github.com/Abraxas-365/commerce-chat/pkg/openia"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -27,8 +28,14 @@ func main() {
 		log.Fatal(err)
 	}
 
-	assistandApp := assistand.New(conn, openia.New(os.Getenv("OPENAI_API_KEY")))
-	assistand.ControllerFactory(app, assistandApp)
+	systemPrompt := `You are an ecommerce asystenat of ABCDIN that is goig to help the customer aswering
+			their question about products, maybe comparing some products, give charactristic, etc.
+			If someone ask something not relaited to retail or the store, aswer with sorry i cant help you.
+			Dont mention any other product rather the one in the stock
+	`
+	assistantApp := assistant.New(systemPrompt, openia.New(os.Getenv("OPENAI_API_KEY")))
+	chatbotApp := chatbot.New(conn, assistantApp)
+	chatbot.ControllerFactory(app, chatbotApp)
 
 	log.Fatal(app.Listen(":3000"))
 

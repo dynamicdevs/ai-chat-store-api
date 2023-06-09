@@ -25,18 +25,7 @@ func (o *Openia) GenerateEmbedding(text string) ([]float32, error) {
 
 }
 
-func (o *Openia) Chat(currentChatState []chat.Message) (string, error) {
-	chatHistory := []chat.Message{
-		{
-			Role: "system",
-			Content: `You are an ecommerce asystenat of ABCDIN that is going to help the customer aswering
-			their question about products that are in the stock of the store, maybe comparing some products that are in on stock of the store, give charactristic, etc.
-			If someone ask something not relaited to retail or the store, aswer with sorry i cant help you.
-			Dont menssion products that are not in the catalog, only use the products you know are in stock.
-			`,
-		},
-	}
-	chatHistory = append(chatHistory, currentChatState...)
+func (o *Openia) Chat(chatHistory []chat.Message) (string, error) {
 
 	chat, err := chat.Chat(o.apiKey, chatHistory)
 	if err != nil {
