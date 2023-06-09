@@ -16,7 +16,7 @@ func ControllerFactory(fiberApp *fiber.App, app *Assistand) {
 
 		resp, err := app.HelpWithEveryThing(messages)
 		if err != nil {
-			return c.Status(400).SendString("Failed to get message")
+			return c.Status(400).SendString("Failed to get message " + err.Error())
 		}
 
 		return c.JSON(resp)

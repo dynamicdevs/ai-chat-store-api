@@ -60,18 +60,21 @@ Name: %s.
 Attributes:
 %s
 		`, product.Name, attributes)
-		fmt.Println(productAndAttributes)
+		fmt.Println(product.Name)
 
 		productosArmados = append(productosArmados, productAndAttributes)
 
 	}
 
-	messages.AddSystemMessage(strings.Join(productosArmados, "\n"))
+	messages.AddSystemMessage(
+		"Catalog of products you know are in stock, this are the only products you know are in stock:\n " +
+			strings.Join(productosArmados, "\n"))
 	messages.AddQuestion(question)
 	response, err := a.openia.Chat(messages)
 	if err != nil {
 		return nil, err
 	}
+
 	messages.AddAssistant(response)
 
 	return messages, nil

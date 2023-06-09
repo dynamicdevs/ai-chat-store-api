@@ -17,7 +17,7 @@ func main() {
 	}
 
 	indexer := indexer.New(conn, openia.New(os.Getenv("OPENAI_API_KEY")))
-	if err := indexer.Index("test.csv"); err != nil {
+	if err := indexer.Index("output.csv"); err != nil {
 		log.Fatal(err)
 	}
 }

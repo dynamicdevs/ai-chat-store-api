@@ -22,7 +22,7 @@ func (r *productRepository) Save(ctx context.Context, p *product.Product) (int, 
 	return id, err
 }
 
-func (r *productRepository) GetBySku(ctx context.Context, sku int) (*product.Product, error) {
+func (r *productRepository) GetBySku(ctx context.Context, sku string) (*product.Product, error) {
 	product := &product.Product{}
 
 	query := `SELECT id, sku, name FROM product WHERE sku = $1`
@@ -32,4 +32,19 @@ func (r *productRepository) GetBySku(ctx context.Context, sku int) (*product.Pro
 		return nil, err
 	}
 	return product, nil
+}
+
+func (r *productRepository) ProductExistsBySku(ctx context.Context, sku string) (int, bool, error) {
+	checkQuery := `SELECT id FROM "public"."product" WHERE sku = $1`
+	var id int
+	err := r.pool.QueryRow(ctx, checkQuery, sku).Scan(&id)
+	if err != nil {
+		if err.Error() == "no rows in result set" {
+			// Product does not exist
+			return 0, false, nil
+		}
+		// Some other error occurred
+		return 0, false, err
+	}
+	return id, true, nil
 }

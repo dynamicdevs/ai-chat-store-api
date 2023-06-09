@@ -54,10 +54,20 @@ func (i *Indexer) Index(csv string) error {
 			defer wg.Done()
 			defer func() { <-sem }() // release slot
 
-			productId, err := productdb.Save(ctx, &productAttribute.Product)
+			id, exist, err := productdb.ProductExistsBySku(ctx, productAttribute.Product.Sku)
 			if err != nil {
-				fmt.Println("Error saving product:", err)
+				fmt.Println("Error saving checking product:", err)
 				return
+			}
+			var productId int
+			if exist {
+				productId = id
+			} else {
+				productId, err = productdb.Save(ctx, &productAttribute.Product)
+				if err != nil {
+					fmt.Println("Error saving product:", err)
+					return
+				}
 			}
 
 			for _, attribute := range productAttribute.Attribute {
@@ -79,8 +89,8 @@ func (i *Indexer) Index(csv string) error {
 
 				embedding, err := i.openia.GenerateEmbedding(attribute.Information)
 				if err != nil {
-					fmt.Println("Error generating embedding:", err)
-					return
+					fmt.Println("Error generating embedding:", err, productId)
+					continue
 				}
 				attribute.Embedding = embedding
 
@@ -124,14 +134,13 @@ func (i *Indexer) ReadCsv(filename string) ([]ProductAttribute, error) {
 			Sku:  line[1],
 			Name: line[0],
 		}
-		fmt.Println(product)
 
 		var attributes []attribute.Attribute
-		// Parse attributes
 		for _, attr := range strings.Split(line[2], "\n") {
 			attribute := attribute.Attribute{Information: attr}
 			attributes = append(attributes, attribute)
 		}
+		attributes = append(attributes, attribute.Attribute{Information: product.Name})
 
 		productAttribute := ProductAttribute{
 			Product:   product,

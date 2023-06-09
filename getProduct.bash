@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the number of iterations
-n=100
+n=200
 
 # Create a CSV file with headers
 echo "name,sku,html_table_attributes_pdp" > output.csv
@@ -9,7 +9,7 @@ echo "name,sku,html_table_attributes_pdp" > output.csv
 # Loop to call the API for different IDs
 for ((i=1; i<=n; i++)); do
     # Call API and extract the name, sku, and html_table_attributes_pdp
-    api_response=$(curl -s --location "https://spdp.abcdin.cl/prd/product?id=$((1174975+i))")
+    api_response=$(curl -s --location "https://spdp.abcdin.cl/prd/product?id=$((1175975+i))")
 
     name=$(echo "$api_response" | jq -r '.name')
     sku=$(echo "$api_response" | jq -r '.sku')
