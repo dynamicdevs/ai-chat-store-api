@@ -63,6 +63,12 @@ func (i *Indexer) Index(csv string) error {
 			if exist {
 				productId = id
 			} else {
+				nameEmbedding, err := i.openia.GenerateEmbedding(productAttribute.Product.Name)
+				if err != nil {
+					fmt.Println("Error generating product:", err)
+					return
+				}
+				productAttribute.Product.Embedding = nameEmbedding
 				productId, err = productdb.Save(ctx, &productAttribute.Product)
 				if err != nil {
 					fmt.Println("Error saving product:", err)

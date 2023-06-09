@@ -14,7 +14,7 @@ func ControllerFactory(fiberApp *fiber.App, app *Assistand) {
 			return c.Status(400).SendString("Failed to parse request")
 		}
 
-		resp, err := app.HelpWithEveryThing(messages)
+		resp, err := app.HelpWithEveryThingProduct(messages)
 		if err != nil {
 			return c.Status(400).SendString("Failed to get message " + err.Error())
 		}

@@ -5,6 +5,7 @@ import (
 
 	"github.com/Abraxas-365/commerce-chat/pkg/product"
 	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/pgvector/pgvector-go"
 )
 
 type productRepository struct {
@@ -17,8 +18,8 @@ func New(pool *pgxpool.Pool) product.Repository {
 
 func (r *productRepository) Save(ctx context.Context, p *product.Product) (int, error) {
 	var id int
-	query := `INSERT INTO "public"."product" (name, sku) VALUES ($1, $2) RETURNING id`
-	err := r.pool.QueryRow(ctx, query, p.Name, p.Sku).Scan(&id)
+	query := `INSERT INTO "public"."product" (name, sku, embedding) VALUES ($1, $2, $3) RETURNING id`
+	err := r.pool.QueryRow(ctx, query, p.Name, p.Sku, pgvector.NewVector(p.Embedding)).Scan(&id)
 	return id, err
 }
 
@@ -32,6 +33,40 @@ func (r *productRepository) GetBySku(ctx context.Context, sku string) (*product.
 		return nil, err
 	}
 	return product, nil
+}
+
+func (r *productRepository) MostSimilarVectors(ctx context.Context, embedding []float32, limit int) ([]product.Product, error) {
+	query := `
+    SELECT p.id, p.sku, p.name
+    FROM "public"."product" p
+    ORDER BY p.embedding <-> $1
+    LIMIT $2;
+    `
+
+	rows, err := r.pool.Query(ctx, query, pgvector.NewVector(embedding), limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var products []product.Product
+
+	for rows.Next() {
+		var p product.Product
+
+		err := rows.Scan(&p.Id, &p.Sku, &p.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		products = append(products, p)
+	}
+
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
+
+	return products, nil
 }
 
 func (r *productRepository) ProductExistsBySku(ctx context.Context, sku string) (int, bool, error) {

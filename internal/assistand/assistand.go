@@ -9,6 +9,7 @@ import (
 	attributepg "github.com/Abraxas-365/commerce-chat/pkg/attribute/pgvector"
 	"github.com/Abraxas-365/commerce-chat/pkg/openia"
 	"github.com/Abraxas-365/commerce-chat/pkg/openia/chat"
+	productpg "github.com/Abraxas-365/commerce-chat/pkg/product/pgvector"
 )
 
 type Assistand struct {
@@ -64,6 +65,41 @@ Attributes:
 
 		productosArmados = append(productosArmados, productAndAttributes)
 
+	}
+
+	messages.AddSystemMessage(
+		"Catalog of products you know are in stock, this are the only products you know are in stock:\n " +
+			strings.Join(productosArmados, "\n"))
+	messages.AddQuestion(question)
+	response, err := a.openia.Chat(messages)
+	if err != nil {
+		return nil, err
+	}
+
+	messages.AddAssistant(response)
+
+	return messages, nil
+}
+
+func (a *Assistand) HelpWithEveryThingProduct(messages chat.Messages) (chat.Messages, error) {
+	//get embedding of the question
+	ctx := context.Background()
+	question := messages[len(messages)-1].Content
+	messages[len(messages)-1].Content = fmt.Sprintf(`Question:%s`, question)
+	embedding, err := a.openia.GenerateEmbedding(question)
+	if err != nil {
+		return nil, err
+	}
+	productdb := productpg.New(a.db.Pool)
+	mostSimilarProducts, err := productdb.MostSimilarVectors(ctx, embedding, 20)
+	if err != nil {
+		return nil, err
+	}
+	productosArmados := []string{}
+	for _, product := range mostSimilarProducts {
+		productAndAttributes := fmt.Sprintf(`Product: %s.`, product.Name)
+		productosArmados = append(productosArmados, productAndAttributes)
+		fmt.Println(product.Name)
 	}
 
 	messages.AddSystemMessage(

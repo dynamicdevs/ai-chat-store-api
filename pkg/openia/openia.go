@@ -33,7 +33,6 @@ func (o *Openia) Chat(currentChatState []chat.Message) (string, error) {
 			their question about products that are in the stock of the store, maybe comparing some products that are in on stock of the store, give charactristic, etc.
 			If someone ask something not relaited to retail or the store, aswer with sorry i cant help you.
 			Dont menssion products that are not in the catalog, only use the products you know are in stock.
-			You only can answer with the products you know are in stock,If you dont know the products, Say you dont have it.
 			`,
 		},
 	}
