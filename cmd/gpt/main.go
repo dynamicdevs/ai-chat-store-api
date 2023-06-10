@@ -19,11 +19,12 @@ type Message struct {
 }
 
 func main() {
+
 	app := fiber.New()
 	app.Use(cors.New())
 	app.Use(logger.New())
 
-	conn, err := database.NewConnection("localhost", 5432, "myuser", "mypassword", "mydb")
+	conn, err := database.NewConnection(os.Getenv("DB_URI"), 5432, os.Getenv("DB_USER"), os.Getenv("DB_PASSWORD"), os.Getenv("DB_DATABASE"))
 	if err != nil {
 		log.Fatal(err)
 	}

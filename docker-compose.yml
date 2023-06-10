@@ -12,3 +12,24 @@ services:
     volumes:
       - ./data:/var/lib/postgresql/data
     restart: always
+
+  gpto:
+    build: .
+    environment:
+      OPENAI_API_KEY: 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
+      DB_URI: db
+      DB_USER: myuser
+      DB_PASSWORD: mypassword
+      DB_DATABASE: mydb
+    depends_on:
+      - db
+    entrypoint:
+      - dockerize
+      - -timeout
+      - 60s
+      - -wait
+      - tcp://db:5432
+    restart: always
+    ports:
+      - 3000:3000
+    command: ./main
