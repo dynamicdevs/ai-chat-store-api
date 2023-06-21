@@ -7,7 +7,7 @@ CREATE TABLE product (
     sku TEXT NOT NULL,
     name TEXT NOT NULL,
     embedding vector(1536) NOT NULL,
-    link TEXT
+    link TEXT,
     price TEXT
 );
 

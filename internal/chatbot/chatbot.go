@@ -99,7 +99,6 @@ Attributes:
 	if err != nil {
 		return nil, err
 	}
-
 	attributes := []string{}
 	for _, attribute := range attributesArray {
 		attributes = append(attributes, attribute.Information)
