@@ -4,6 +4,25 @@
 
 GPTO is an AI-powered assistant tool for e-commerce platforms. It has two main functionalities: indexing product data into a database, and acting as a chatbot to assist customers on e-commerce websites.
 
+## Generating Code Documentation
+
+To generate and view code documentation locally, use the `godoc` tool. Follow these steps:
+
+1. Ensure that you have Go installed on your machine.
+
+2. Run the `godoc` server:
+
+   ```sh
+   godoc -http=:6060
+   ```
+
+3. Open your web browser and go to: [http://localhost:6060](http://localhost:6060).
+
+4. To find the documentation for your project, navigate to the pkg tab.
+   Here, you will find a list of all the packages available in your $GOPATH. Locate your project's package and click on it.
+   For example, if your package is at github.com/Abraxas-365/commerce-chat, you can directly go to:
+   [http://localhost:6060/pkg/github.com/Abraxas-365/commerce-chat/]
+
 ## Project Structure
 
 .
