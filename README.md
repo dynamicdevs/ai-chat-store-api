@@ -10,6 +10,10 @@ To generate and view code documentation locally, use the `godoc` tool. Follow th
 
 1. Ensure that you have Go installed on your machine.
 
+```sh
+ go install golang.org/x/tools/cmd/godoc@latest
+```
+
 2. Run the `godoc` server:
 
    ```sh
