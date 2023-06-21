@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -23,8 +24,9 @@ func main() {
 	app := fiber.New()
 	app.Use(cors.New())
 	app.Use(logger.New())
+	fmt.Println()
 
-	conn, err := database.NewConnection(os.Getenv("DB_URI"), 5432, os.Getenv("DB_USER"), os.Getenv("DB_PASSWORD"), os.Getenv("DB_DATABASE"))
+	conn, err := database.NewConnection("chat-store-server.postgres.database.azure.com", 5432, "myuser", "mypassword", "mydb")
 	if err != nil {
 		log.Fatal(err)
 	}
