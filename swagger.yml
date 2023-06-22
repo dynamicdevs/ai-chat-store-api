@@ -1,0 +1,75 @@
+swagger: "2.0"
+info:
+  title: Commerce Chatbot API
+  description: API for interacting with a commerce chatbot.
+  version: "1.0"
+host: "localhost:3000" # Change this to the appropriate host and port
+schemes:
+  - http
+basePath: /api
+consumes:
+  - application/json
+produces:
+  - application/json
+paths:
+  /messages:
+    post:
+      summary: Send messages to the chatbot
+      description: This endpoint allows sending multiple messages to the chatbot and receiving a response.
+      parameters:
+        - in: body
+          name: messages
+          description: An array of messages to be sent to the chatbot
+          required: true
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/Message"
+      responses:
+        200:
+          description: Successful response
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/Message"
+        400:
+          description: Failed to parse request or failed to get message
+  /messages/product/{id}:
+    post:
+      summary: Send messages to the chatbot regarding a specific product
+      description: This endpoint allows sending multiple messages to the chatbot regarding a specific product and receiving a response.
+      parameters:
+        - in: path
+          name: id
+          type: string
+          required: true
+          description: The product SKU
+        - in: body
+          name: messages
+          description: An array of messages to be sent to the chatbot regarding the specified product
+          required: true
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/Message"
+      responses:
+        200:
+          description: Successful response
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/Message"
+        400:
+          description: Failed to parse request or failed to get message
+definitions:
+  Message:
+    type: object
+    properties:
+      role:
+        type: string
+        description: The role of the message (e.g., user, bot)
+        example: user
+      content:
+        type: string
+        description: The content of the message
+        example: What's the price of this product?
