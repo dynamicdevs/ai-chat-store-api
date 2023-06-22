@@ -40,6 +40,6 @@ func main() {
 	chatbotApp := chatbot.New(conn, assistantApp)
 	chatbot.ControllerFactory(app, chatbotApp)
 
-	log.Fatal(app.Listen(":3000"))
+	log.Fatal(app.Listen(":80"))
 
 }
