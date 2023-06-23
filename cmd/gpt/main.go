@@ -26,7 +26,7 @@ func main() {
 	app.Use(logger.New())
 	fmt.Println()
 
-	conn, err := database.NewConnection(os.Getenv("DB_URI"), 5432, os.Getenv("DB_USER"), os.Getenv("DB_PASSWORD"), os.Getenv("DB_DATABASE"))
+	conn, err := database.NewConnection("chat-store-server.postgres.database.azure.com", 5432, "chatstoreadmin", "Ch4tSt0R34dm1n", "postgres")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -39,6 +39,8 @@ func main() {
 	assistantApp := assistant.New(systemPrompt, openia.New(os.Getenv("OPENAI_API_KEY")))
 	chatbotApp := chatbot.New(conn, assistantApp)
 	chatbot.ControllerFactory(app, chatbotApp)
+	// Serve the Swagger UI
+	app.Static("/docs", "./dist")
 
 	log.Fatal(app.Listen(":80"))
 

@@ -3,7 +3,7 @@ info:
   title: Commerce Chatbot API
   description: API for interacting with a commerce chatbot.
   version: "1.0"
-host: "localhost:3000" # Change this to the appropriate host and port
+host: "ai-dns-public.westus3.azurecontainer.io" # Change this to the appropriate host and port
 schemes:
   - http
 basePath: /api
