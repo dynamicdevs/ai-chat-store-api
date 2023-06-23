@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 
@@ -24,7 +23,11 @@ func main() {
 	app := fiber.New()
 	app.Use(cors.New())
 	app.Use(logger.New())
-	fmt.Println()
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: "*",
+		AllowMethods: "GET,POST,PUT,DELETE",
+		AllowHeaders: "Origin, Content-Type, Accept",
+	}))
 
 	conn, err := database.NewConnection("chat-store-server.postgres.database.azure.com", 5432, "chatstoreadmin", "Ch4tSt0R34dm1n", "postgres")
 	if err != nil {
@@ -41,6 +44,10 @@ func main() {
 	chatbot.ControllerFactory(app, chatbotApp)
 	// Serve the Swagger UI
 	app.Static("/docs", "./dist")
+	// Serve the Swagger YAML file
+	app.Use("/swagger.yml", func(c *fiber.Ctx) error {
+		return c.SendFile("./swagger.yml")
+	})
 
 	log.Fatal(app.Listen(":80"))
 
