@@ -4,6 +4,10 @@
 
 GPTO is an AI-powered assistant tool for e-commerce platforms. It has two main functionalities: indexing product data into a database, and acting as a chatbot to assist customers on e-commerce websites.
 
+## Swagger
+
+<url>/docs
+
 ## Generating Code Documentation
 
 To generate and view code documentation locally, use the `godoc` tool. Follow these steps:
