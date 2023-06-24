@@ -11,7 +11,7 @@ import (
 
 func main() {
 
-	conn, err := database.NewConnection(os.Getenv("DB_URI"), 5432, os.Getenv("DB_USER"), os.Getenv("DB_PASSWORD"), os.Getenv("DB_DATABASE"))
+	conn, err := database.NewConnection("chat-store-server.postgres.database.azure.com", 5432, "chatstoreadmin", "Ch4tSt0R34dm1n", "postgres")
 	if err != nil {
 		log.Fatal(err)
 	}
