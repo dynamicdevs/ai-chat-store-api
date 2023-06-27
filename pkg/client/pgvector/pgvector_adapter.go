@@ -17,8 +17,8 @@ func New(pool *pgxpool.Pool) client.Repository {
 
 func (r *clientRepository) Save(ctx context.Context, c *client.Client) (int, error) {
 	var id int
-	query := `INSERT INTO "public"."client" (name,system_prompt) VALUES ($1) RETURNING id`
-	err := r.pool.QueryRow(ctx, query, c.Name).Scan(&id)
+	query := `INSERT INTO "public"."client" (name,system_prompt) VALUES ($1,$2) RETURNING id`
+	err := r.pool.QueryRow(ctx, query, c.Name, c.SystemPromt).Scan(&id)
 	return id, err
 }
 
