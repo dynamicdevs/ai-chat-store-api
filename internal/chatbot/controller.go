@@ -14,7 +14,7 @@ func ControllerFactory(fiberApp *fiber.App, conf Config) {
 	// Handler for chatting with the store
 	apiGroup.Post("/messages", func(c *fiber.Ctx) error {
 		bot := New(conf)
-		client, err := bot.clientdb.GetById(c.Context(), 1)
+		client, err := bot.clientdb.GetById(c.Context(), 1) //when there are more users get the id form a bearer token
 		if err != nil {
 			log.Printf("Failed to get client: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "Internal Server Error"})
@@ -35,9 +35,9 @@ func ControllerFactory(fiberApp *fiber.App, conf Config) {
 	})
 
 	// Handler for chatting with a specific product
-	apiGroup.Post("/products/:id/messages", func(c *fiber.Ctx) error {
+	apiGroup.Post("/messages/product/:id", func(c *fiber.Ctx) error {
 		bot := New(conf)
-		client, err := bot.clientdb.GetById(c.Context(), 1)
+		client, err := bot.clientdb.GetById(c.Context(), 1) //when there are more users get the id form a bearer token
 		if err != nil {
 			log.Printf("Failed to get client: %v", err)
 			return c.Status(500).JSON(fiber.Map{"error": "Internal Server Error"})
