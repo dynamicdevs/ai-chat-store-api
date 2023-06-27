@@ -46,8 +46,9 @@ func (c *Chatbot) ChatAllTheStore(messages chat.Messages) (chat.Messages, error)
 
 	sytemPrompt := "Catalog of products you know are in stock, this are the only products you know are in stock:\n " +
 		strings.Join(productosArmados, "\n")
+	c.assistant.AddSystemPrompt(sytemPrompt)
 
-	chat, err := c.assistant.Help(messages, &sytemPrompt, nil)
+	chat, err := c.assistant.Help(messages)
 	if err != nil {
 		return nil, err
 	}
@@ -104,9 +105,11 @@ Attributes:
 		attributes = append(attributes, attribute.Information)
 	}
 
-	systemPrompt := fmt.Sprintf("Product in stock that is beeing consulted: %s \n product attribures %s. \n aswer in base of this product", product.Name, strings.Join(attributes, "\n"))
 	systemInfoPrompt := fmt.Sprintf("Other Products in stock that you can use to extend your answer: %s \n", strings.Join(productosArmados, "\n"))
-	chat, err := c.assistant.Help(messages, &systemInfoPrompt, &systemPrompt)
+	systemPrompt := fmt.Sprintf("Product in stock that is beeing consulted: %s \n product attribures %s. \n aswer in base of this product", product.Name, strings.Join(attributes, "\n"))
+	c.assistant.AddSystemPrompt(systemPrompt)
+	c.assistant.AddSystemPrompt(systemInfoPrompt)
+	chat, err := c.assistant.Help(messages)
 	if err != nil {
 		return nil, err
 	}

@@ -10,33 +10,28 @@ import (
 //structura tiene que tener el mensage del systema de cuando se inicia
 
 type Assistant struct {
-	systemConfPrompt string
-	openia           *openia.Openia
-	messages         chat.Messages
+	openia   *openia.Openia
+	messages chat.Messages
 }
 
-func New(systemConfPrompt string, openia *openia.Openia) *Assistant {
+func New(openia *openia.Openia) *Assistant {
 	return &Assistant{
-		systemConfPrompt,
 		openia,
-		chat.Messages{chat.Message{
-			Role:    "system",
-			Content: systemConfPrompt,
-		}},
+		chat.Messages{},
 	}
 }
 
-func (a *Assistant) Help(messages chat.Messages, systemInfo *string, addToSystemPrompt *string) (chat.Messages, error) {
-	assitantConfigMessages := a.messages
-	if addToSystemPrompt != nil {
-		assitantConfigMessages[0].Content = fmt.Sprintf("%s \n %s", assitantConfigMessages[0].Content, *addToSystemPrompt)
-	}
+func (a *Assistant) AddSystemPrompt(prompt string) {
+	a.messages = append(a.messages, chat.Message{
+		Role:    "system",
+		Content: prompt,
+	})
+}
 
-	messages = append(assitantConfigMessages, messages...)
+func (a *Assistant) Help(messagesHistory chat.Messages) (chat.Messages, error) {
+
+	messages := append(a.messages, messagesHistory...)
 	a.formatUserMessageAsQuestion(&messages)
-	if systemInfo != nil {
-		messages.AddSystemMessage(*systemInfo)
-	}
 
 	result, err := a.openia.Chat(messages)
 	if err != nil {
