@@ -25,7 +25,7 @@ func (r *clientRepository) Save(ctx context.Context, c *client.Client) (int, err
 func (r *clientRepository) GetById(ctx context.Context, id int) (*client.Client, error) {
 	client := &client.Client{}
 
-	query := `SELECT id, name, system_prompt FROM product WHERE id = $1`
+	query := `SELECT id, name, system_prompt FROM client WHERE id = $1`
 
 	err := r.pool.QueryRow(ctx, query, id).Scan(&client.Id, &client.Name, &client.SystemPromt)
 	if err != nil {
