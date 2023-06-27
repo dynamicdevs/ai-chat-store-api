@@ -76,6 +76,23 @@ func (c *Chatbot) ChatAllTheStore(messages chat.Messages) (chat.Messages, error)
 
 func (c *Chatbot) ChatWithProduct(sku string, messages chat.Messages) (chat.Messages, error) {
 	ctx := context.Background()
+
+	attributesCh := make(chan []string)
+	errorCh := make(chan error)
+
+	go func() {
+		attributesArray, err := c.attributedb.GetBySKU(ctx, sku)
+		if err != nil {
+			errorCh <- err
+			return
+		}
+		attributes := []string{}
+		for _, attribute := range attributesArray {
+			attributes = append(attributes, attribute.Information)
+		}
+		attributesCh <- attributes
+	}()
+
 	product, err := c.productdb.GetBySku(ctx, sku)
 	if err != nil {
 		return nil, err
@@ -85,6 +102,7 @@ func (c *Chatbot) ChatWithProduct(sku string, messages chat.Messages) (chat.Mess
 	if err != nil {
 		return nil, err
 	}
+
 	otherProducts, err := c.attributedb.MostSimilarVectorsExeptProductBySku(ctx, questionEmbedding, 2, sku)
 	var otherProductsIds []int
 	for _, product := range otherProducts {
@@ -94,35 +112,32 @@ func (c *Chatbot) ChatWithProduct(sku string, messages chat.Messages) (chat.Mess
 	if err != nil {
 		return nil, err
 	}
+
+	attributes, ok := <-attributesCh
+	if !ok {
+		err := <-errorCh
+		return nil, err
+	}
+
 	productosArmados := []string{}
 	for _, product := range otherProducts {
 		fmt.Println(product.Name)
 		productAttributes := otherAttributes[product.Id]
-		attributes := ""
+		attributesStr := ""
 		for _, productAttribute := range productAttributes {
-			attributes += productAttribute.Information + "\n"
+			attributesStr += productAttribute.Information + "\n"
 		}
 		productAndAttributes := fmt.Sprintf(`
 Name: %s.
 Attributes:
 %s
-		`, product.Name, attributes)
+		`, product.Name, attributesStr)
 
 		productosArmados = append(productosArmados, productAndAttributes)
-
-	}
-
-	attributesArray, err := c.attributedb.GetBySKU(ctx, sku)
-	if err != nil {
-		return nil, err
-	}
-	attributes := []string{}
-	for _, attribute := range attributesArray {
-		attributes = append(attributes, attribute.Information)
 	}
 
 	systemInfoPrompt := fmt.Sprintf("Other Products in stock that you can use to extend your answer: %s \n", strings.Join(productosArmados, "\n"))
-	systemPrompt := fmt.Sprintf("Product in stock that is beeing consulted: %s \n product attribures %s. \n aswer in base of this product", product.Name, strings.Join(attributes, "\n"))
+	systemPrompt := fmt.Sprintf("Product in stock that is being consulted: %s \n product attributes %s. \n answer based on this product", product.Name, strings.Join(attributes, "\n"))
 	c.assistant.AddSystemPrompt(systemPrompt)
 	c.assistant.AddSystemPrompt(systemInfoPrompt)
 	chat, err := c.assistant.Help(messages)
