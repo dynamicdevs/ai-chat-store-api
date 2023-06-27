@@ -7,15 +7,18 @@ import (
 
 	"github.com/Abraxas-365/commerce-chat/internal/database"
 	"github.com/Abraxas-365/commerce-chat/pkg/assistant"
+	"github.com/Abraxas-365/commerce-chat/pkg/attribute"
 	attributepg "github.com/Abraxas-365/commerce-chat/pkg/attribute/pgvector"
 	"github.com/Abraxas-365/commerce-chat/pkg/openia"
 	"github.com/Abraxas-365/commerce-chat/pkg/openia/chat"
+	"github.com/Abraxas-365/commerce-chat/pkg/product"
 	productpg "github.com/Abraxas-365/commerce-chat/pkg/product/pgvector"
 )
 
 type Chatbot struct {
-	db        *database.Connection
-	assistant *assistant.Assistant
+	assistant   *assistant.Assistant
+	productdb   product.Repository
+	attributedb attribute.Repository
 }
 
 type Config struct {
@@ -26,9 +29,12 @@ type Config struct {
 func New(c Config) *Chatbot {
 
 	assistant := assistant.New(c.Openia)
+	productdb := productpg.New(c.Db.Pool)
+	attributedb := attributepg.New(c.Db.Pool)
 	return &Chatbot{
-		c.Db,
 		assistant,
+		productdb,
+		attributedb,
 	}
 }
 
@@ -40,8 +46,7 @@ func (c *Chatbot) ChatAllTheStore(messages chat.Messages) (chat.Messages, error)
 	}
 	//trart los mas parecidos de la db
 
-	productdb := productpg.New(c.db.Pool)
-	mostSimilarProducts, err := productdb.MostSimilarVectors(ctx, questionEmbedding, 15)
+	mostSimilarProducts, err := c.productdb.MostSimilarVectors(ctx, questionEmbedding, 15)
 	if err != nil {
 		return nil, err
 	}
@@ -66,9 +71,7 @@ func (c *Chatbot) ChatAllTheStore(messages chat.Messages) (chat.Messages, error)
 
 func (c *Chatbot) ChatWithProduct(sku string, messages chat.Messages) (chat.Messages, error) {
 	ctx := context.Background()
-	productdb := productpg.New(c.db.Pool)
-	attributedb := attributepg.New(c.db.Pool)
-	product, err := productdb.GetBySku(ctx, sku)
+	product, err := c.productdb.GetBySku(ctx, sku)
 	if err != nil {
 		return nil, err
 	}
@@ -77,12 +80,12 @@ func (c *Chatbot) ChatWithProduct(sku string, messages chat.Messages) (chat.Mess
 	if err != nil {
 		return nil, err
 	}
-	otherProducts, err := attributedb.MostSimilarVectorsExeptProductBySku(ctx, questionEmbedding, 2, sku)
+	otherProducts, err := c.attributedb.MostSimilarVectorsExeptProductBySku(ctx, questionEmbedding, 2, sku)
 	var otherProductsIds []int
 	for _, product := range otherProducts {
 		otherProductsIds = append(otherProductsIds, product.Id)
 	}
-	otherAttributes, err := attributedb.GetByProducts(ctx, otherProductsIds)
+	otherAttributes, err := c.attributedb.GetByProducts(ctx, otherProductsIds)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +107,7 @@ Attributes:
 
 	}
 
-	attributesArray, err := attributedb.GetBySKU(ctx, sku)
+	attributesArray, err := c.attributedb.GetBySKU(ctx, sku)
 	if err != nil {
 		return nil, err
 	}
