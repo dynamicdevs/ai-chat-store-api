@@ -13,7 +13,7 @@ func ControllerFactory(fiberApp *fiber.App, conf Config) {
 	r.Post("/messages", func(c *fiber.Ctx) error {
 		ctx := context.Background()
 		bot := New(conf)
-		client, err := bot.clientdb.GetById(ctx, 1)
+		client, err := bot.clientdb.GetById(ctx, 1) //when there are more users get the id form a bearer token
 		if err != nil {
 			return c.Status(500).SendString("Failed to get client: " + err.Error())
 		}
@@ -33,13 +33,16 @@ func ControllerFactory(fiberApp *fiber.App, conf Config) {
 	})
 
 	r.Post("/messages/product/:id", func(c *fiber.Ctx) error {
+		ctx := context.Background()
 		bot := New(conf)
+		client, err := bot.clientdb.GetById(ctx, 1) //when there are more users get the id form a bearer token
 		var messages []chat.Message
 		sku := c.Params("id")
 		if err := c.BodyParser(&messages); err != nil {
 			return c.Status(400).SendString("Failed to parse request")
 		}
 
+		bot.assistant.AddSystemPrompt(client.SystemPromt)
 		resp, err := bot.ChatWithProduct(sku, messages)
 		if err != nil {
 			return c.Status(400).SendString("Failed to get message " + err.Error())
