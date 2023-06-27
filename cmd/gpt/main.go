@@ -12,11 +12,6 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/logger"
 )
 
-type Message struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
-}
-
 func main() {
 
 	app := fiber.New()
