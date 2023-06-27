@@ -8,6 +8,7 @@ import (
 	"github.com/Abraxas-365/commerce-chat/internal/database"
 	"github.com/Abraxas-365/commerce-chat/pkg/assistant"
 	attributepg "github.com/Abraxas-365/commerce-chat/pkg/attribute/pgvector"
+	"github.com/Abraxas-365/commerce-chat/pkg/openia"
 	"github.com/Abraxas-365/commerce-chat/pkg/openia/chat"
 	productpg "github.com/Abraxas-365/commerce-chat/pkg/product/pgvector"
 )
@@ -17,9 +18,16 @@ type Chatbot struct {
 	assistant *assistant.Assistant
 }
 
-func New(db *database.Connection, assistant *assistant.Assistant) *Chatbot {
+type Config struct {
+	Db     *database.Connection
+	Openia *openia.Openia
+}
+
+func New(c Config) *Chatbot {
+
+	assistant := assistant.New(c.Openia)
 	return &Chatbot{
-		db,
+		c.Db,
 		assistant,
 	}
 }
