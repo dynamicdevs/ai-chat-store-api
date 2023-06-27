@@ -27,5 +27,5 @@ CREATE TABLE product_attribute (
 CREATE TABLE client (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
-    system_promt TEXT
+    system_prompt TEXT
 );
