@@ -1,21 +1,15 @@
 package chatbot
 
 import (
-	"os"
-
-	"github.com/Abraxas-365/commerce-chat/internal/database"
-	"github.com/Abraxas-365/commerce-chat/pkg/assistant"
-	"github.com/Abraxas-365/commerce-chat/pkg/openia"
 	"github.com/Abraxas-365/commerce-chat/pkg/openia/chat"
 	"github.com/gofiber/fiber/v2"
 )
 
-func ControllerFactory(fiberApp *fiber.App, conn *database.Connection) {
+func ControllerFactory(fiberApp *fiber.App, conf Config) {
 	r := fiberApp.Group("/api")
 
 	r.Post("/messages", func(c *fiber.Ctx) error {
-		assistant := assistant.New(openia.New(os.Getenv("OPENAI_API_KEY")))
-		bot := New(conn, assistant)
+		bot := New(conf)
 		var messages []chat.Message
 		if err := c.BodyParser(&messages); err != nil {
 			return c.Status(400).SendString("Failed to parse request")
@@ -37,8 +31,7 @@ func ControllerFactory(fiberApp *fiber.App, conn *database.Connection) {
 	})
 
 	r.Post("/messages/product/:id", func(c *fiber.Ctx) error {
-		assistant := assistant.New(openia.New(os.Getenv("OPENAI_API_KEY")))
-		bot := New(conn, assistant)
+		bot := New(conf)
 		var messages []chat.Message
 		sku := c.Params("id")
 		if err := c.BodyParser(&messages); err != nil {

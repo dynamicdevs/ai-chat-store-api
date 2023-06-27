@@ -2,9 +2,11 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/Abraxas-365/commerce-chat/internal/chatbot"
 	"github.com/Abraxas-365/commerce-chat/internal/database"
+	"github.com/Abraxas-365/commerce-chat/pkg/openia"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -31,7 +33,11 @@ func main() {
 		log.Fatal(err)
 	}
 
-	chatbot.ControllerFactory(app, conn)
+	conf := chatbot.Config{
+		Db:     conn,
+		Openia: openia.New(os.Getenv("OPENAI_API_KEY")),
+	}
+	chatbot.ControllerFactory(app, conf)
 	// Serve the Swagger UI
 	app.Static("/docs", "./dist")
 	// Serve the Swagger YAML file
