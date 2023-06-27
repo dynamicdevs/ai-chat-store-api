@@ -1,6 +1,8 @@
 package chatbot
 
 import (
+	"context"
+
 	"github.com/Abraxas-365/commerce-chat/pkg/openia/chat"
 	"github.com/gofiber/fiber/v2"
 )
@@ -9,18 +11,18 @@ func ControllerFactory(fiberApp *fiber.App, conf Config) {
 	r := fiberApp.Group("/api")
 
 	r.Post("/messages", func(c *fiber.Ctx) error {
+		ctx := context.Background()
 		bot := New(conf)
+		client, err := bot.clientdb.GetById(ctx, 1)
+		if err != nil {
+			return c.Status(500).SendString("Failed to get client: " + err.Error())
+		}
 		var messages []chat.Message
 		if err := c.BodyParser(&messages); err != nil {
 			return c.Status(400).SendString("Failed to parse request")
 		}
 
-		systemPrompt := `You are an ecommerce asystenat of ABCDIN that is goig to help the customer aswering
-			their question about products, maybe comparing some products, give charactristic, etc.
-			If someone ask something not relaited to retail or the store, aswer with sorry i cant help you.
-			Dont mention any other product rather the one in the stock
-	`
-		bot.assistant.AddSystemPrompt(systemPrompt)
+		bot.assistant.AddSystemPrompt(client.SystemPromt)
 		resp, err := bot.ChatAllTheStore(messages)
 		if err != nil {
 			return c.Status(400).SendString("Failed to get message " + err.Error())
