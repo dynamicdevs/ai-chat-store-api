@@ -22,3 +22,10 @@ CREATE TABLE product_attribute (
     attribute_id INT NOT NULL REFERENCES attribute(id),
     PRIMARY KEY (product_id, attribute_id)
 );
+
+
+CREATE TABLE client (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    system_promt TEXT
+);
