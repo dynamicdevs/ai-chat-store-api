@@ -50,7 +50,7 @@ func (r *attributeRepository) CheckAttributeExists(ctx context.Context, informat
 	return existingAttributeID, true, nil
 }
 
-func (r *attributeRepository) GetByProducts(ctx context.Context, ids []int) (map[int][]attribute.Attribute, error) {
+func (r *attributeRepository) GetByProducts(ctx context.Context, ids []int) (map[int][]string, error) {
 	query := `
 	SELECT a.id, pa.product_id, a.information
 	FROM "public"."attribute" a
@@ -65,14 +65,14 @@ func (r *attributeRepository) GetByProducts(ctx context.Context, ids []int) (map
 	}
 	defer rows.Close()
 
-	attributeMap := make(map[int][]attribute.Attribute)
+	attributeMap := make(map[int][]string)
 	for rows.Next() {
 		var a attribute.Attribute
 		err := rows.Scan(&a.Id, &a.Product, &a.Information)
 		if err != nil {
 			return nil, err
 		}
-		attributeMap[a.Product] = append(attributeMap[a.Product], a)
+		attributeMap[a.Product] = append(attributeMap[a.Product], a.Information)
 	}
 
 	if rows.Err() != nil {
