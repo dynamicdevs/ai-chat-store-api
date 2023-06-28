@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/Abraxas-365/commerce-chat/pkg/attribute"
-	"github.com/Abraxas-365/commerce-chat/pkg/product"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/lib/pq"
 	"github.com/pgvector/pgvector-go"
@@ -49,46 +48,6 @@ func (r *attributeRepository) CheckAttributeExists(ctx context.Context, informat
 	}
 
 	return existingAttributeID, true, nil
-}
-
-func (r *attributeRepository) MostSimilarVectors(ctx context.Context, embedding []float32, limit int) ([]product.Product, error) {
-	query := `
-    SELECT p.id, p.sku, p.name
-    FROM "public"."product" p
-    JOIN (
-        SELECT pa.product_id, MIN(a.embedding <-> $1) as distance
-        FROM "public"."attribute" a
-        JOIN "public"."product_attribute" pa ON a.id = pa.attribute_id
-        GROUP BY pa.product_id
-    ) subquery ON p.id = subquery.product_id
-    ORDER BY subquery.distance
-    LIMIT $2;
-    `
-
-	rows, err := r.pool.Query(ctx, query, pgvector.NewVector(embedding), limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var products []product.Product
-
-	for rows.Next() {
-		var p product.Product
-
-		err := rows.Scan(&p.Id, &p.Sku, &p.Name)
-		if err != nil {
-			return nil, err
-		}
-
-		products = append(products, p)
-	}
-
-	if rows.Err() != nil {
-		return nil, rows.Err()
-	}
-
-	return products, nil
 }
 
 func (r *attributeRepository) GetByProducts(ctx context.Context, ids []int) (map[int][]attribute.Attribute, error) {
