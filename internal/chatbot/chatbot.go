@@ -5,41 +5,35 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Abraxas-365/commerce-chat/internal/database"
 	"github.com/Abraxas-365/commerce-chat/pkg/assistant"
 	"github.com/Abraxas-365/commerce-chat/pkg/attribute"
-	attributepg "github.com/Abraxas-365/commerce-chat/pkg/attribute/pgvector"
 	"github.com/Abraxas-365/commerce-chat/pkg/client"
-	clientpg "github.com/Abraxas-365/commerce-chat/pkg/client/pgvector"
 	"github.com/Abraxas-365/commerce-chat/pkg/openia"
 	"github.com/Abraxas-365/commerce-chat/pkg/openia/chat"
 	"github.com/Abraxas-365/commerce-chat/pkg/product"
-	productpg "github.com/Abraxas-365/commerce-chat/pkg/product/pgvector"
 )
 
 type Chatbot struct {
-	assistant   *assistant.Assistant
-	productdb   product.Repository
-	attributedb attribute.Repository
-	clientdb    client.Repository
+	assistant *assistant.Assistant
+	clientdb  client.Repository
+	pservice  product.Service
 }
 
 type Config struct {
-	Db     *database.Connection
+	Prepo  product.Repository
+	Arepo  attribute.Repository
+	Crepo  client.Repository
 	Openia *openia.Openia
 }
 
 func New(c Config) *Chatbot {
 
+	pservice := product.NewService(c.Prepo, c.Arepo)
 	assistant := assistant.New(c.Openia)
-	productdb := productpg.New(c.Db.Pool)
-	attributedb := attributepg.New(c.Db.Pool)
-	clientdb := clientpg.New(c.Db.Pool)
 	return &Chatbot{
 		assistant,
-		productdb,
-		attributedb,
-		clientdb,
+		c.Crepo,
+		pservice,
 	}
 }
 
@@ -49,9 +43,8 @@ func (c *Chatbot) ChatAllTheStore(messages chat.Messages) (chat.Messages, error)
 	if err != nil {
 		return nil, err
 	}
-	//trart los mas parecidos de la db
 
-	mostSimilarProducts, err := c.productdb.MostSimilarVectors(ctx, questionEmbedding, 15)
+	mostSimilarProducts, err := c.pservice.GetByEmbedding(ctx, questionEmbedding, 10)
 	if err != nil {
 		return nil, err
 	}
@@ -77,67 +70,44 @@ func (c *Chatbot) ChatAllTheStore(messages chat.Messages) (chat.Messages, error)
 func (c *Chatbot) ChatWithProduct(sku string, messages chat.Messages) (chat.Messages, error) {
 	ctx := context.Background()
 
-	attributesCh := make(chan []string)
-	errorCh := make(chan error)
-
-	go func() {
-		attributesArray, err := c.attributedb.GetBySKU(ctx, sku)
-		if err != nil {
-			errorCh <- err
-			return
-		}
-		attributes := []string{}
-		for _, attribute := range attributesArray {
-			attributes = append(attributes, attribute.Information)
-		}
-		attributesCh <- attributes
-	}()
-
-	product, err := c.productdb.GetBySku(ctx, sku)
+	principalProduct, err := c.pservice.GetBySku(ctx, sku)
 	if err != nil {
 		return nil, err
 	}
 
-	questionEmbedding, err := c.assistant.GetQuestionEmbedding(messages[len(messages)-1].Content + " " + product.Name)
+	questionEmbedding, err := c.assistant.GetQuestionEmbedding(messages[len(messages)-1].Content + " " + principalProduct.Name)
 	if err != nil {
 		return nil, err
 	}
 
-	otherProducts, err := c.productdb.MostSimilarVectorsExeptProductBySku(ctx, questionEmbedding, 2, sku)
+	otherProducts, err := c.pservice.OtherSimilars(ctx, sku, questionEmbedding, 2)
 	var otherProductsIds []int
 	for _, product := range otherProducts {
 		otherProductsIds = append(otherProductsIds, product.Id)
 	}
-	otherAttributes, err := c.attributedb.GetByProducts(ctx, otherProductsIds)
-	if err != nil {
-		return nil, err
-	}
 
-	attributes, ok := <-attributesCh
-	if !ok {
-		err := <-errorCh
-		return nil, err
-	}
-
-	productosArmados := []string{}
-	for _, product := range otherProducts {
-		fmt.Println(product.Name)
-		productAttributes := otherAttributes[product.Id]
-		attributesStr := ""
-		for _, productAttribute := range productAttributes {
-			attributesStr += productAttribute.Information + "\n"
-		}
-		productAndAttributes := fmt.Sprintf(`
+	const productTemplate = `
 Name: %s.
 Attributes:
 %s
-		`, product.Name, attributesStr)
+`
+	var productosArmados []string
+	for _, product := range otherProducts {
+		fmt.Println(product.Name)
+
+		var attributesBuilder strings.Builder
+		for _, productAttribute := range product.Attributes {
+			attributesBuilder.WriteString(productAttribute)
+			attributesBuilder.WriteString("\n")
+		}
+
+		productAndAttributes := fmt.Sprintf(productTemplate, product.Name, attributesBuilder.String())
 
 		productosArmados = append(productosArmados, productAndAttributes)
 	}
 
 	systemInfoPrompt := fmt.Sprintf("Other Products in stock that you can use to extend your answer: %s \n", strings.Join(productosArmados, "\n"))
-	systemPrompt := fmt.Sprintf("Product in stock that is being consulted: %s \n product attributes %s. \n answer based on this product", product.Name, strings.Join(attributes, "\n"))
+	systemPrompt := fmt.Sprintf("Product in stock that is being consulted: %s \n product attributes %s. \n answer based on this product", principalProduct.Name, strings.Join(principalProduct.Attributes, "\n"))
 	c.assistant.AddSystemPrompt(systemPrompt)
 	c.assistant.AddSystemPrompt(systemInfoPrompt)
 	chat, err := c.assistant.Help(messages)

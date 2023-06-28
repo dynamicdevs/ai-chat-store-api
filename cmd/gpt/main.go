@@ -6,7 +6,10 @@ import (
 
 	"github.com/Abraxas-365/commerce-chat/internal/chatbot"
 	"github.com/Abraxas-365/commerce-chat/internal/database"
+	attributepg "github.com/Abraxas-365/commerce-chat/pkg/attribute/pgvector"
+	clientpg "github.com/Abraxas-365/commerce-chat/pkg/client/pgvector"
 	"github.com/Abraxas-365/commerce-chat/pkg/openia"
+	productpg "github.com/Abraxas-365/commerce-chat/pkg/product/pgvector"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -29,7 +32,9 @@ func main() {
 	}
 
 	conf := chatbot.Config{
-		Db:     conn,
+		Prepo:  productpg.New(conn.Pool),
+		Arepo:  attributepg.New(conn.Pool),
+		Crepo:  clientpg.New(conn.Pool),
 		Openia: openia.New(os.Getenv("OPENAI_API_KEY")),
 	}
 	chatbot.ControllerFactory(app, conf)
