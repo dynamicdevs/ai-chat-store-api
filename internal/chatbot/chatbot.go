@@ -103,7 +103,7 @@ func (c *Chatbot) ChatWithProduct(sku string, messages chat.Messages) (chat.Mess
 		return nil, err
 	}
 
-	otherProducts, err := c.attributedb.MostSimilarVectorsExeptProductBySku(ctx, questionEmbedding, 2, sku)
+	otherProducts, err := c.productdb.MostSimilarVectorsExeptProductBySku(ctx, questionEmbedding, 2, sku)
 	var otherProductsIds []int
 	for _, product := range otherProducts {
 		otherProductsIds = append(otherProductsIds, product.Id)

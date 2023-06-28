@@ -13,5 +13,4 @@ type Repository interface {
 	CheckAttributeExists(ctx context.Context, information string) (int, bool, error)
 	AssociateAttributeWithProduct(ctx context.Context, productID int, attributeID int) error
 	GetBySKU(ctx context.Context, sku string) ([]Attribute, error)
-	MostSimilarVectorsExeptProductBySku(ctx context.Context, embedding []float32, limit int, excludeSku string) ([]product.Product, error)
 }

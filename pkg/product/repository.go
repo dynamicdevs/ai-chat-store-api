@@ -9,4 +9,5 @@ type Repository interface {
 	GetBySku(ctx context.Context, sku string) (*Product, error)
 	ProductExistsBySku(ctx context.Context, sku string) (int, bool, error)
 	MostSimilarVectors(ctx context.Context, embedding []float32, limit int) ([]Product, error)
+	MostSimilarVectorsExeptProductBySku(ctx context.Context, embedding []float32, limit int, excludeSku string) ([]Product, error)
 }

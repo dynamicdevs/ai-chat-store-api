@@ -83,3 +83,46 @@ func (r *productRepository) ProductExistsBySku(ctx context.Context, sku string) 
 	}
 	return id, true, nil
 }
+
+func (r *productRepository) MostSimilarVectorsExeptProductBySku(ctx context.Context, embedding []float32, limit int, excludeSku string) ([]product.Product, error) {
+	query := `
+    SELECT p.id, p.sku, p.name
+    FROM "public"."product" p
+    JOIN (
+        SELECT pa.product_id, MIN(a.embedding <-> $1) as distance
+        FROM "public"."attribute" a
+        JOIN "public"."product_attribute" pa ON a.id = pa.attribute_id
+        WHERE pa.product_id NOT IN (
+            SELECT id FROM "public"."product" WHERE sku = $2
+        )
+        GROUP BY pa.product_id
+    ) subquery ON p.id = subquery.product_id
+    ORDER BY subquery.distance
+    LIMIT $3;
+    `
+
+	rows, err := r.pool.Query(ctx, query, pgvector.NewVector(embedding), excludeSku, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var products []product.Product
+
+	for rows.Next() {
+		var p product.Product
+
+		err := rows.Scan(&p.Id, &p.Sku, &p.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		products = append(products, p)
+	}
+
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
+
+	return products, nil
+}
