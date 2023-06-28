@@ -37,83 +37,80 @@ func New(c Config) *Chatbot {
 	}
 }
 
-func (c *Chatbot) ChatAllTheStore(messages chat.Messages) (chat.Messages, error) {
+func (c *Chatbot) ChatRetrieveProductsBasedOnChat(messages chat.Messages) (chat.Messages, error) {
 	ctx := context.Background()
-	questionEmbedding, err := c.assistant.GetQuestionEmbedding(messages[len(messages)-1].Content)
+	latestMessage := messages[len(messages)-1].Content
+
+	questionEmbedding, err := c.assistant.GetQuestionEmbedding(latestMessage)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get question embedding: %w", err)
 	}
 
-	mostSimilarProducts, err := c.pservice.GetByEmbedding(ctx, questionEmbedding, 10)
+	similarProducts, err := c.pservice.GetByEmbedding(ctx, questionEmbedding, 10)
 	if err != nil {
-		return nil, err
-	}
-	productosArmados := []string{}
-	for _, product := range mostSimilarProducts {
-		productAndAttributes := fmt.Sprintf(`Product: %s.`, product.Name)
-		productosArmados = append(productosArmados, productAndAttributes)
-		fmt.Println(product.Name)
+		return nil, fmt.Errorf("failed to retrieve products by embedding: %w", err)
 	}
 
-	sytemPrompt := "Catalog of products you know are in stock, this are the only products you know are in stock:\n " +
-		strings.Join(productosArmados, "\n")
-	c.assistant.AddSystemPrompt(sytemPrompt)
+	catalogPrompt := buildProductCatalogPrompt(similarProducts)
+	c.assistant.AddSystemPrompt(catalogPrompt)
 
-	chat, err := c.assistant.Help(messages)
-	if err != nil {
-		return nil, err
-	}
-
-	return chat, err
+	return c.assistant.Help(messages)
 }
 
-func (c *Chatbot) ChatWithProduct(sku string, messages chat.Messages) (chat.Messages, error) {
+func buildProductCatalogPrompt(products []product.ProdutDetailes) string {
+	productDescriptions := make([]string, len(products))
+	for i, product := range products {
+		productDescriptions[i] = fmt.Sprintf("Product: %s.", product.Name)
+	}
+
+	return "Catalog of products you know are in stock, these are the only products you know are in stock:\n" +
+		strings.Join(productDescriptions, "\n")
+}
+
+func (c *Chatbot) ChatWithRelevantProducts(sku string, messages chat.Messages) (chat.Messages, error) {
 	ctx := context.Background()
 
-	principalProduct, err := c.pservice.GetBySku(ctx, sku)
+	mainProduct, err := c.pservice.GetBySku(ctx, sku)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to retrieve main product: %w", err)
 	}
 
-	questionEmbedding, err := c.assistant.GetQuestionEmbedding(messages[len(messages)-1].Content + " " + principalProduct.Name)
+	questionWithProduct := messages[len(messages)-1].Content + " " + mainProduct.Name
+	questionEmbedding, err := c.assistant.GetQuestionEmbedding(questionWithProduct)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get question embedding: %w", err)
 	}
 
-	otherProducts, err := c.pservice.OtherSimilars(ctx, sku, questionEmbedding, 2)
-	var otherProductsIds []int
-	for _, product := range otherProducts {
-		otherProductsIds = append(otherProductsIds, product.Id)
+	similarProducts, err := c.pservice.OtherSimilars(ctx, sku, questionEmbedding, 2)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve similar products: %w", err)
 	}
 
-	const productTemplate = `
+	systemInfoPrompt := buildProductInfoPrompt(similarProducts)
+	systemPrompt := fmt.Sprintf("Product in stock that is being consulted:\n%s\nAnswer based on this product.", buildProductInfo(*mainProduct))
+
+	c.assistant.AddSystemPrompt(systemPrompt)
+	c.assistant.AddSystemPrompt(systemInfoPrompt)
+
+	return c.assistant.Help(messages)
+}
+
+func buildProductInfo(product product.ProdutDetailes) string {
+	productInfoTemplate := `
 Name: %s.
 Attributes:
 %s
 `
-	var productosArmados []string
-	for _, product := range otherProducts {
-		fmt.Println(product.Name)
+	attributes := strings.Join(product.Attributes, "\n")
 
-		var attributesBuilder strings.Builder
-		for _, productAttribute := range product.Attributes {
-			attributesBuilder.WriteString(productAttribute)
-			attributesBuilder.WriteString("\n")
-		}
+	return fmt.Sprintf(productInfoTemplate, product.Name, attributes)
+}
 
-		productAndAttributes := fmt.Sprintf(productTemplate, product.Name, attributesBuilder.String())
-
-		productosArmados = append(productosArmados, productAndAttributes)
+func buildProductInfoPrompt(products []product.ProdutDetailes) string {
+	var productInfoList []string
+	for _, product := range products {
+		productInfoList = append(productInfoList, buildProductInfo(product))
 	}
 
-	systemInfoPrompt := fmt.Sprintf("Other Products in stock that you can use to extend your answer: %s \n", strings.Join(productosArmados, "\n"))
-	systemPrompt := fmt.Sprintf("Product in stock that is being consulted: %s \n product attributes %s. \n answer based on this product", principalProduct.Name, strings.Join(principalProduct.Attributes, "\n"))
-	c.assistant.AddSystemPrompt(systemPrompt)
-	c.assistant.AddSystemPrompt(systemInfoPrompt)
-	chat, err := c.assistant.Help(messages)
-	if err != nil {
-		return nil, err
-	}
-
-	return chat, nil
+	return fmt.Sprintf("Other Products in stock that you can use to extend your answer:\n%s", strings.Join(productInfoList, "\n"))
 }

@@ -25,7 +25,7 @@ func ControllerFactory(fiberApp *fiber.App, conf Config) {
 		}
 
 		bot.assistant.AddSystemPrompt(client.SystemPromt)
-		resp, err := bot.ChatAllTheStore(messages)
+		resp, err := bot.ChatRetrieveProductsBasedOnChat(messages)
 		if err != nil {
 			log.Printf("Failed to get message: %v", err)
 			return c.Status(400).JSON(fiber.Map{"error": "Bad Request"})
@@ -49,7 +49,7 @@ func ControllerFactory(fiberApp *fiber.App, conf Config) {
 		sku := c.Params("id")
 
 		bot.assistant.AddSystemPrompt(client.SystemPromt)
-		resp, err := bot.ChatWithProduct(sku, messages)
+		resp, err := bot.ChatWithRelevantProducts(sku, messages)
 		if err != nil {
 			log.Printf("Failed to get message: %v", err)
 			return c.Status(400).JSON(fiber.Map{"error": "Bad Request"})
