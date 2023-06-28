@@ -48,15 +48,15 @@ func (i *Indexer) Index(csv string) error {
 	fmt.Println(productAttributes[0].Product.Price)
 
 	var wg sync.WaitGroup
-	sem := make(chan struct{}, 5) // limits concurrent goroutines
+	sem := make(chan struct{}, 5)
 
 	for _, productAttribute := range productAttributes {
 		wg.Add(1)
-		sem <- struct{}{} // acquire a slot
+		sem <- struct{}{}
 
 		go func(productAttribute ProductAttribute) {
 			defer wg.Done()
-			defer func() { <-sem }() // release slot
+			defer func() { <-sem }()
 
 			id, exist, err := productdb.ProductExistsBySku(ctx, productAttribute.Product.Sku)
 			if err != nil {
@@ -118,7 +118,7 @@ func (i *Indexer) Index(csv string) error {
 		}(productAttribute)
 	}
 
-	wg.Wait() // wait for all goroutines to finish
+	wg.Wait()
 
 	return nil
 }
