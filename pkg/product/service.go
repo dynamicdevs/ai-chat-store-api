@@ -10,6 +10,7 @@ import (
 type Service interface {
 	GetBySku(ctx context.Context, sku string) (*ProdutDetailes, error)
 	OtherSimilars(ctx context.Context, sku string, embedding []float32, limit int) ([]ProdutDetailes, error)
+	GetByEmbedding(ctx context.Context, embedding []float32, limit int) ([]ProdutDetailes, error)
 }
 
 type service struct {
@@ -58,6 +59,36 @@ func (s *service) GetBySku(ctx context.Context, sku string) (*ProdutDetailes, er
 		Name:       product.Name,
 		Attributes: attributes,
 	}, nil
+}
+
+func (s *service) GetByEmbedding(ctx context.Context, embedding []float32, limit int) ([]ProdutDetailes, error) {
+	products, err := s.prepo.MostSimilarVectors(ctx, embedding, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve most similar vectors: %w", err)
+	}
+	productCount := len(products)
+	productsIds := make([]int, 0, productCount)
+	for _, product := range products {
+		productsIds = append(productsIds, product.Id)
+	}
+	attributesMap, err := s.arepo.GetByProducts(ctx, productsIds)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve attributes by products: %w", err)
+	}
+	productsDetails := make([]ProdutDetailes, 0, productCount)
+	for _, product := range products {
+		productAttributes, found := attributesMap[product.Id]
+		if !found {
+			continue
+		}
+		productsDetails = append(productsDetails, ProdutDetailes{
+			Id:         product.Id,
+			Sku:        product.Sku,
+			Name:       product.Name,
+			Attributes: productAttributes,
+		})
+	}
+	return productsDetails, nil
 }
 
 func (s *service) OtherSimilars(ctx context.Context, sku string, embedding []float32, limit int) ([]ProdutDetailes, error) {
