@@ -18,8 +18,8 @@ func New(pool *pgxpool.Pool) product.Repository {
 
 func (r *productRepository) Save(ctx context.Context, p *product.Product) (int, error) {
 	var id int
-	query := `INSERT INTO "public"."product" (name, sku, embedding) VALUES ($1, $2, $3) RETURNING id`
-	err := r.pool.QueryRow(ctx, query, p.Name, p.Sku, pgvector.NewVector(p.Embedding)).Scan(&id)
+	query := `INSERT INTO "public"."product" (name, sku, embedding, link, price) VALUES ($1, $2, $3, $4, $5) RETURNING id`
+	err := r.pool.QueryRow(ctx, query, p.Name, p.Sku, pgvector.NewVector(p.Embedding), p.UrlPath, p.Price).Scan(&id)
 	return id, err
 }
 
@@ -37,7 +37,7 @@ func (r *productRepository) GetBySku(ctx context.Context, sku string) (*product.
 
 func (r *productRepository) MostSimilarVectors(ctx context.Context, embedding []float32, limit int) ([]product.Product, error) {
 	query := `
-    SELECT p.id, p.sku, p.name
+    SELECT p.id, p.sku, p.name,p.price,p.link
     FROM "public"."product" p
     ORDER BY p.embedding <-> $1
     LIMIT $2;
@@ -54,7 +54,7 @@ func (r *productRepository) MostSimilarVectors(ctx context.Context, embedding []
 	for rows.Next() {
 		var p product.Product
 
-		err := rows.Scan(&p.Id, &p.Sku, &p.Name)
+		err := rows.Scan(&p.Id, &p.Sku, &p.Name, &p.Price, &p.UrlPath)
 		if err != nil {
 			return nil, err
 		}
@@ -65,7 +65,6 @@ func (r *productRepository) MostSimilarVectors(ctx context.Context, embedding []
 	if rows.Err() != nil {
 		return nil, rows.Err()
 	}
-
 	return products, nil
 }
 

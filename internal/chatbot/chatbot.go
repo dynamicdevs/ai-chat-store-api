@@ -46,7 +46,7 @@ func (c *Chatbot) ChatRetrieveProductsBasedOnChat(messages chat.Messages) (chat.
 		return nil, fmt.Errorf("failed to get question embedding: %w", err)
 	}
 
-	similarProducts, err := c.pservice.GetByEmbedding(ctx, questionEmbedding, 10)
+	similarProducts, err := c.pservice.GetByEmbedding(ctx, questionEmbedding, 25)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve products by embedding: %w", err)
 	}
@@ -58,13 +58,15 @@ func (c *Chatbot) ChatRetrieveProductsBasedOnChat(messages chat.Messages) (chat.
 }
 
 func buildProductCatalogPrompt(products []product.ProdutDetailes) string {
-	productDescriptions := make([]string, len(products))
-	for i, product := range products {
-		productDescriptions[i] = fmt.Sprintf("Product: %s.", product.Name)
+	var builder strings.Builder
+
+	builder.WriteString("Catalog of products you know are in stock, these are the only products you know are in stock:\n")
+
+	for _, product := range products {
+		builder.WriteString(fmt.Sprintf("Product: %s.\nUrl: %s.\nPrice: %s.\n", product.Name, product.UrlPath, product.Price))
 	}
 
-	return "Catalog of products you know are in stock, these are the only products you know are in stock:\n" +
-		strings.Join(productDescriptions, "\n")
+	return builder.String()
 }
 
 func (c *Chatbot) ChatWithRelevantProducts(sku string, messages chat.Messages) (chat.Messages, error) {
@@ -96,21 +98,24 @@ func (c *Chatbot) ChatWithRelevantProducts(sku string, messages chat.Messages) (
 }
 
 func buildProductInfo(product product.ProdutDetailes) string {
-	productInfoTemplate := `
-Name: %s.
-Attributes:
-%s
-`
+	var builder strings.Builder
+
 	attributes := strings.Join(product.Attributes, "\n")
 
-	return fmt.Sprintf(productInfoTemplate, product.Name, attributes)
+	builder.WriteString(fmt.Sprintf("Name: %s.\nUrl: %s\nPrice: %s\nAttributes:\n%s\n", product.Name, product.UrlPath, product.Price, attributes))
+
+	return builder.String()
 }
 
 func buildProductInfoPrompt(products []product.ProdutDetailes) string {
-	var productInfoList []string
+	var builder strings.Builder
+
+	builder.WriteString("Other Products in stock that you can use to extend your answer:\n")
+
 	for _, product := range products {
-		productInfoList = append(productInfoList, buildProductInfo(product))
+		builder.WriteString(buildProductInfo(product))
+		builder.WriteString("\n")
 	}
 
-	return fmt.Sprintf("Other Products in stock that you can use to extend your answer:\n%s", strings.Join(productInfoList, "\n"))
+	return builder.String()
 }

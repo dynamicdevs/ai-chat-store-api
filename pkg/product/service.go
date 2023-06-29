@@ -85,6 +85,8 @@ func (s *service) GetByEmbedding(ctx context.Context, embedding []float32, limit
 			Id:         product.Id,
 			Sku:        product.Sku,
 			Name:       product.Name,
+			Price:      product.Price,
+			UrlPath:    product.UrlPath,
 			Attributes: productAttributes,
 		})
 	}

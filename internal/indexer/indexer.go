@@ -42,6 +42,10 @@ func (i *Indexer) Index(csv string) error {
 	if err != nil {
 		return err
 	}
+	fmt.Println(productAttributes[0].Product.Name)
+	fmt.Println(productAttributes[0].Product.Sku)
+	fmt.Println(productAttributes[0].Product.UrlPath)
+	fmt.Println(productAttributes[0].Product.Price)
 
 	var wg sync.WaitGroup
 	sem := make(chan struct{}, 5) // limits concurrent goroutines
@@ -135,10 +139,17 @@ func (i *Indexer) ReadCsv(filename string) ([]ProductAttribute, error) {
 
 	var productAttributes []ProductAttribute
 
-	for _, line := range lines {
+	// Skipping the header line
+	for idx, line := range lines {
+		if idx == 0 {
+			continue
+		}
+
 		product := product.Product{
-			Sku:  line[1],
-			Name: line[0],
+			Sku:     line[1],
+			Name:    line[0],
+			UrlPath: line[3],
+			Price:   line[4],
 		}
 
 		var attributes []attribute.Attribute
