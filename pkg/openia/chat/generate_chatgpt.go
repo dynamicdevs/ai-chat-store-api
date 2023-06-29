@@ -11,7 +11,7 @@ func Chat(openiaKey string, messages []Message) (*ChatCompletion, error) {
 	url := "https://api.openai.com/v1/chat/completions"
 
 	data := map[string]interface{}{
-		"model":    "gpt-3.5-turbo",
+		"model":    "gpt-3.5-turbo-16k",
 		"messages": messages,
 	}
 
