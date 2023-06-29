@@ -83,7 +83,7 @@ func (c *Chatbot) ChatWithRelevantProducts(sku string, messages chat.Messages) (
 		return nil, fmt.Errorf("failed to get question embedding: %w", err)
 	}
 
-	similarProducts, err := c.pservice.OtherSimilars(ctx, sku, questionEmbedding, 2)
+	similarProducts, err := c.pservice.OtherSimilars(ctx, sku, questionEmbedding, 4)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve similar products: %w", err)
 	}
