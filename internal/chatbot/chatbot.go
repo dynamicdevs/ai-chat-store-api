@@ -63,7 +63,7 @@ func buildProductCatalogPrompt(products []product.ProdutDetailes) string {
 	builder.WriteString("Catalog of products you know are in stock, these are the only products you know are in stock:\n")
 
 	for _, product := range products {
-		builder.WriteString(fmt.Sprintf("Product: %s.\nUrl: %s.\nPrice: %s.\n", product.Name, product.UrlPath, product.Price))
+		builder.WriteString(fmt.Sprintf("Product: %s.\nKey: %s.\nPrice: %s.\n", product.Name, product.UrlPath, product.Price))
 	}
 
 	return builder.String()
